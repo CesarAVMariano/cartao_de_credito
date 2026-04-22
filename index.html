@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cartão de Crédito — Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <div class="app-bg" aria-hidden="true"></div>
+    <div class="app">
+      <aside class="sidebar glass">
+        <div class="brand">
+          <span class="brand-icon" aria-hidden="true"></span>
+          <span class="brand-text">CrediView</span>
+        </div>
+        <p class="nav-label">Menu</p>
+        <nav class="nav">
+          <a class="nav-item active" href="#"><span class="nav-ico" data-icon="grid"></span>Dashboard</a>
+          <a class="nav-item" href="#"><span class="nav-ico" data-icon="card"></span>Cartões</a>
+          <a class="nav-item" href="#"><span class="nav-ico" data-icon="chart"></span>Relatórios</a>
+        </nav>
+        <p class="nav-label">Geral</p>
+        <nav class="nav">
+          <a class="nav-item" href="#"><span class="nav-ico" data-icon="bell"></span>Notificações</a>
+          <a class="nav-item" href="#"><span class="nav-ico" data-icon="gear"></span>Configurações</a>
+        </nav>
+        <div class="sidebar-cta">
+          <p>Resumo do período</p>
+          <strong>Jan–Mar/2026</strong>
+          <span class="sidebar-cta-hint">Dados mock para demonstração</span>
+        </div>
+      </aside>
+
+      <div class="main-wrap">
+        <header class="topbar glass">
+          <div class="search-wrap">
+            <span class="search-ico" aria-hidden="true"></span>
+            <input
+              type="search"
+              class="search-input"
+              id="globalSearch"
+              placeholder="Buscar transações, categorias…"
+              autocomplete="off"
+            />
+            <kbd class="search-kbd">Ctrl K</kbd>
+          </div>
+          <div class="topbar-actions">
+            <button type="button" class="icon-btn" id="themeToggle" title="Alternar tema">
+              <span class="theme-ico" aria-hidden="true"></span>
+            </button>
+            <div class="user-pill">
+              <span class="user-avatar" aria-hidden="true">CM</span>
+              <div class="user-meta">
+                <span class="user-name">Usuário</span>
+                <span class="user-mail">contato@exemplo.com</span>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main class="content">
+          <section class="page-head">
+            <div>
+              <h1>Dashboard</h1>
+              <p class="subtitle">Visão consolidada do seu cartão de crédito</p>
+            </div>
+            <div class="page-head-btns">
+              <button type="button" class="btn btn-primary" id="btnExport">Exportar CSV</button>
+            </div>
+          </section>
+
+          <section class="cards-row" id="summaryCards" aria-label="Resumo">
+            <article class="stat-card glass highlight">
+              <div class="stat-card-top">
+                <span class="stat-label">Total da fatura</span>
+                <span class="stat-arrow" aria-hidden="true">↗</span>
+              </div>
+              <p class="stat-value" id="cardTotal">R$ 0,00</p>
+              <p class="stat-foot">Período 01/01 a 31/03/2026</p>
+            </article>
+            <article class="stat-card glass">
+              <div class="stat-card-top">
+                <span class="stat-label">Qtd. de lançamentos</span>
+                <span class="stat-arrow" aria-hidden="true">↗</span>
+              </div>
+              <p class="stat-value" id="cardCount">0</p>
+              <p class="stat-foot">Transações no período</p>
+            </article>
+            <article class="stat-card glass">
+              <div class="stat-card-top">
+                <span class="stat-label">Ticket médio</span>
+                <span class="stat-arrow" aria-hidden="true">↗</span>
+              </div>
+              <p class="stat-value" id="cardAvg">R$ 0,00</p>
+              <p class="stat-foot">Valor médio por lançamento</p>
+            </article>
+          </section>
+
+          <section class="charts-grid">
+            <div class="chart-panel glass">
+              <div class="panel-head">
+                <h2>Gasto por categoria</h2>
+                <span class="panel-badge">Barras</span>
+              </div>
+              <div class="chart-box">
+                <canvas id="chartCategoria" height="220"></canvas>
+              </div>
+            </div>
+            <div class="chart-panel glass">
+              <div class="panel-head">
+                <h2>Evolução de gasto por dia</h2>
+                <span class="panel-badge">Linha</span>
+              </div>
+              <div class="chart-box">
+                <canvas id="chartEvolucao" height="220"></canvas>
+              </div>
+            </div>
+          </section>
+
+          <section class="table-section glass">
+            <div class="table-head">
+              <h2>Transações</h2>
+              <div class="table-filters">
+                <label class="filter-field">
+                  <span>Categoria</span>
+                  <select id="filterCategoria">
+                    <option value="">Todas</option>
+                  </select>
+                </label>
+                <label class="filter-field">
+                  <span>De</span>
+                  <input type="date" id="filterDataDe" min="2026-01-01" max="2026-03-31" />
+                </label>
+                <label class="filter-field">
+                  <span>Até</span>
+                  <input type="date" id="filterDataAte" min="2026-01-01" max="2026-03-31" />
+                </label>
+                <label class="filter-field grow">
+                  <span>Busca</span>
+                  <input type="text" id="filterTexto" placeholder="Descrição, subcategoria…" />
+                </label>
+                <button type="button" class="btn btn-ghost" id="filterReset">Limpar</button>
+              </div>
+            </div>
+            <div class="table-scroll">
+              <table class="data-table" id="transactionsTable">
+                <thead>
+                  <tr>
+                    <th>
+                      <button type="button" class="th-btn" data-sort="data" data-type="date">
+                        Data <span class="sort-ind"></span>
+                      </button>
+                    </th>
+                    <th>
+                      <button type="button" class="th-btn" data-sort="valor" data-type="number">
+                        Valor <span class="sort-ind"></span>
+                      </button>
+                    </th>
+                    <th>
+                      <button type="button" class="th-btn" data-sort="categoria" data-type="string">
+                        Categoria <span class="sort-ind"></span>
+                      </button>
+                    </th>
+                    <th>
+                      <button type="button" class="th-btn" data-sort="subcategoria" data-type="string">
+                        Subcategoria <span class="sort-ind"></span>
+                      </button>
+                    </th>
+                    <th>
+                      <button type="button" class="th-btn" data-sort="descricao" data-type="string">
+                        Descrição <span class="sort-ind"></span>
+                      </button>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody id="transactionsBody"></tbody>
+              </table>
+            </div>
+            <p class="table-foot" id="tableCount"></p>
+          </section>
+        </main>
+      </div>
+    </div>
+  </body>
+</html>
