@@ -76,31 +76,37 @@
           </section>
 
           <section class="dashboard-filters glass" aria-label="Filtro do período">
-            <div class="segment-filters" id="segmentFilters">
-              <div class="segment-block" role="group" aria-label="Intervalo">
-                <span class="segment-block-label">Intervalo</span>
+            <div class="segment-filters segment-filters--one-line" id="segmentFilters">
+              <div class="segment-chunk" role="group" aria-label="Intervalo">
+                <span class="segment-chunk-label">Intervalo</span>
                 <div class="segment-control" id="segIntervalo">
-                  <button type="button" class="seg-btn seg-btn--wide" data-seg-action="hist" id="segBtnHist">
+                  <button type="button" class="seg-btn seg-btn--hist" data-seg-action="hist" id="segBtnHist">
                     Todo o histórico
                   </button>
                 </div>
               </div>
-              <div class="segment-block" role="group" aria-label="Ano">
-                <span class="segment-block-label">Ano</span>
+              <div class="segment-divider" aria-hidden="true"></div>
+              <div class="segment-chunk" role="group" aria-label="Ano">
+                <span class="segment-chunk-label">Ano</span>
                 <div class="segment-control" id="segAnos"></div>
               </div>
-              <div class="segment-block segment-block--mes" id="segMesBlock" hidden>
-                <span class="segment-block-label">Mês <span class="segment-block-sublabel">(com dados no ano selecionado)</span></span>
+              <div class="segment-divider" aria-hidden="true"></div>
+              <div class="segment-chunk segment-chunk--mes" role="group" aria-label="Mês">
+                <span class="segment-chunk-label">Mês</span>
                 <div class="segment-control segment-control--mes" id="segMeses"></div>
-                <div class="segment-control segment-ano-inteiro">
-                  <button type="button" class="seg-btn seg-btn--ghost" data-seg-action="year-only" id="segBtnAnoInteiro" hidden>
-                    Ano inteiro
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  class="seg-btn seg-btn--ghost seg-btn--ano-inteiro"
+                  data-seg-action="year-only"
+                  id="segBtnAnoInteiro"
+                  hidden
+                >
+                  Ano int.
+                </button>
               </div>
             </div>
             <p class="dashboard-filters-hint" id="dashboardFiltersHint">
-              Use os segmentos acima. Anos fora de calendário (ano anterior e atual) ou meses sem lançamentos ficam inativos. Ajuste as datas abaixo para intervalo personalizado.
+              Um único mês sem ano agrupa todos os <strong>janeiro</strong>, <strong>fevereiro</strong> etc. do histórico. Com ano selecionado, o mês restringe àquele ano. Ajuste as datas abaixo para intervalo personalizado.
             </p>
           </section>
 

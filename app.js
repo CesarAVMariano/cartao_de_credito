@@ -205,6 +205,12 @@ function hasDataInMonth(y, month1to12) {
   );
 }
 
+/** Pelo menos um lançamento nesse mês (1–12), em qualquer ano */
+function hasDataInMonthAllYears(month1to12) {
+  const m0 = month1to12 - 1;
+  return allTransactions.some((t) => t.data.getMonth() === m0);
+}
+
 function isFullYearOneCalendar(de, ate, y) {
   if (!de || !ate) return false;
   const a = new Date(y, 0, 1);
@@ -220,6 +226,12 @@ function isSingleMonthInYear(de, ate, y, month1to12) {
 }
 
 function applySegmentYear(y) {
+  const ps = state.periodSeg;
+  const mKeep = typeof ps === "object" && ps && ps.m != null ? ps.m : null;
+  if (mKeep != null) {
+    applySegmentYearMonth(y, mKeep);
+    return;
+  }
   const de = new Date(y, 0, 1);
   const ate = new Date(y, 11, 31);
   const sDe = toISODate(de);
@@ -251,6 +263,50 @@ function applySegmentYearMonth(y, month1to12) {
   state.dataDe = sDe;
   state.dataAte = sAte;
   state.periodSeg = { y, m: month1to12 };
+  rebuildSegmentUI();
+  updateDateInputBounds();
+}
+
+function applySegmentYearWhole(y) {
+  if (!hasDataInYear(y)) return;
+  const de = new Date(y, 0, 1);
+  const ate = new Date(y, 11, 31);
+  const sDe = toISODate(de);
+  const sAte = toISODate(ate);
+  const deEl = document.getElementById("filterDataDe");
+  const ateEl = document.getElementById("filterDataAte");
+  if (deEl && ateEl) {
+    deEl.value = sDe;
+    ateEl.value = sAte;
+  }
+  state.dataDe = sDe;
+  state.dataAte = sAte;
+  state.periodSeg = { y, m: null };
+  rebuildSegmentUI();
+  updateDateInputBounds();
+}
+
+function applySegmentMonthOnly(month1to12) {
+  const m0 = month1to12 - 1;
+  const subset = allTransactions.filter((t) => t.data.getMonth() === m0);
+  if (!subset.length) return;
+  let minD = subset[0].data;
+  let maxD = subset[0].data;
+  for (const t of subset) {
+    if (t.data < minD) minD = t.data;
+    if (t.data > maxD) maxD = t.data;
+  }
+  const sDe = toISODate(minD);
+  const sAte = toISODate(maxD);
+  const deEl = document.getElementById("filterDataDe");
+  const ateEl = document.getElementById("filterDataAte");
+  if (deEl && ateEl) {
+    deEl.value = sDe;
+    ateEl.value = sAte;
+  }
+  state.dataDe = sDe;
+  state.dataAte = sAte;
+  state.periodSeg = { y: null, m: month1to12 };
   rebuildSegmentUI();
   updateDateInputBounds();
 }
@@ -306,13 +362,13 @@ const MESES_ABREV = [
 function rebuildSegmentUI() {
   const histBtn = document.getElementById("segBtnHist");
   const segAnos = document.getElementById("segAnos");
-  const segMesBlock = document.getElementById("segMesBlock");
   const segMeses = document.getElementById("segMeses");
   const segBtnAnoInteiro = document.getElementById("segBtnAnoInteiro");
-  if (!histBtn || !segAnos) return;
+  if (!histBtn || !segAnos || !segMeses) return;
 
   const hasAny = allTransactions.length > 0;
   histBtn.disabled = !hasAny;
+  histBtn.textContent = state.periodSeg === "hist" ? "Todo o histórico" : "Limpar Filtros";
   histBtn.classList.toggle("seg-btn--active", state.periodSeg === "hist");
 
   const yui = getUiYears();
@@ -325,41 +381,41 @@ function rebuildSegmentUI() {
     btn.textContent = String(y);
     btn.dataset.segYear = String(y);
     btn.disabled = !can;
-    const active = typeof state.periodSeg === "object" && state.periodSeg && state.periodSeg.y === y;
+    const ps = state.periodSeg;
+    const active = typeof ps === "object" && ps && ps.y === y;
     btn.classList.toggle("seg-btn--active", active);
     segAnos.appendChild(btn);
   }
 
-  const showMes =
-    typeof state.periodSeg === "object" &&
-    state.periodSeg !== null &&
-    yui.includes(state.periodSeg.y);
-  if (segMesBlock) segMesBlock.hidden = !showMes;
+  const ps = state.periodSeg;
+  const selectedY = typeof ps === "object" && ps && ps.y != null ? ps.y : null;
+
   if (segBtnAnoInteiro) {
-    if (!showMes) {
+    if (selectedY == null) {
       segBtnAnoInteiro.hidden = true;
     } else {
-      const y = state.periodSeg.y;
-      const canY = hasDataInYear(y);
       segBtnAnoInteiro.hidden = false;
-      segBtnAnoInteiro.disabled = !canY;
-      segBtnAnoInteiro.classList.toggle("seg-btn--active", state.periodSeg.m === null);
+      segBtnAnoInteiro.disabled = !hasDataInYear(selectedY);
+      segBtnAnoInteiro.classList.toggle("seg-btn--active", ps.m === null);
     }
   }
-  if (!showMes || !segMeses) return;
 
-  const y = state.periodSeg.y;
   segMeses.innerHTML = "";
   for (let m = 1; m <= 12; m++) {
-    const can = hasDataInMonth(y, m);
+    const can =
+      selectedY != null ? hasDataInMonth(selectedY, m) : hasDataInMonthAllYears(m);
     const b = document.createElement("button");
     b.type = "button";
     b.className = "seg-btn seg-btn--sm";
     b.textContent = MESES_ABREV[m - 1];
     b.dataset.segMonth = String(m);
-    b.title = new Date(y, m - 1, 1).toLocaleDateString("pt-BR", { month: "long" });
+    b.title =
+      selectedY != null
+        ? new Date(selectedY, m - 1, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" })
+        : `Todos os ${new Date(2000, m - 1, 1).toLocaleDateString("pt-BR", { month: "long" })} (qualquer ano)`;
     b.disabled = !can;
-    b.classList.toggle("seg-btn--active", state.periodSeg.m === m);
+    const monthActive = typeof ps === "object" && ps && ps.m === m;
+    b.classList.toggle("seg-btn--active", monthActive);
     segMeses.appendChild(b);
   }
 }
@@ -390,9 +446,14 @@ function getDateOnlyFilter() {
 
 function matchesFilters(t) {
   if (state.categoria && t.categoria !== state.categoria) return false;
-  const { de, ate } = getDateOnlyFilter();
-  if (de && t.data < de) return false;
-  if (ate && t.data > ate) return false;
+  const ps = state.periodSeg;
+  if (typeof ps === "object" && ps && ps.m != null && (ps.y === null || ps.y === undefined)) {
+    if (t.data.getMonth() !== ps.m - 1) return false;
+  } else {
+    const { de, ate } = getDateOnlyFilter();
+    if (de && t.data < de) return false;
+    if (ate && t.data > ate) return false;
+  }
   const q = state.search.trim().toLowerCase();
   if (q) {
     const blob = [t.categoria, t.subcategoria, t.descricao, formatMoney(t.valor), toISODate(t.data)]
@@ -417,11 +478,17 @@ function updateSummary(transactions) {
   document.getElementById("cardAvg").textContent = formatMoney(avg);
   const periodEl = document.getElementById("cardPeriod");
   if (periodEl) {
-    const { de, ate } = getDateOnlyFilter();
-    if (de && ate) {
-      periodEl.textContent = `Período ${de.toLocaleDateString("pt-BR")} a ${ate.toLocaleDateString("pt-BR")}`;
+    const ps = state.periodSeg;
+    if (typeof ps === "object" && ps && ps.m != null && (ps.y === null || ps.y === undefined)) {
+      const nome = new Date(2000, ps.m - 1, 1).toLocaleDateString("pt-BR", { month: "long" });
+      periodEl.textContent = `Todos os ${nome} (todos os anos)`;
     } else {
-      periodEl.textContent = "—";
+      const { de, ate } = getDateOnlyFilter();
+      if (de && ate) {
+        periodEl.textContent = `Período ${de.toLocaleDateString("pt-BR")} a ${ate.toLocaleDateString("pt-BR")}`;
+      } else {
+        periodEl.textContent = "—";
+      }
     }
   }
 }
@@ -1052,8 +1119,8 @@ function init() {
       }
       if (t.dataset.segAction === "year-only") {
         const ps = state.periodSeg;
-        if (typeof ps === "object" && ps && ps.y) {
-          applySegmentYear(ps.y);
+        if (typeof ps === "object" && ps && ps.y != null) {
+          applySegmentYearWhole(ps.y);
           refresh();
         }
         return;
@@ -1066,12 +1133,16 @@ function init() {
         return;
       }
       if (t.dataset.segMonth != null) {
-        const ps = state.periodSeg;
-        if (typeof ps !== "object" || !ps || !ps.y) return;
-        const y = ps.y;
         const m = parseInt(t.dataset.segMonth, 10);
-        if (!hasDataInMonth(y, m)) return;
-        applySegmentYearMonth(y, m);
+        const ps0 = state.periodSeg;
+        const ySel = typeof ps0 === "object" && ps0 && ps0.y != null ? ps0.y : null;
+        if (ySel != null) {
+          if (!hasDataInMonth(ySel, m)) return;
+          applySegmentYearMonth(ySel, m);
+        } else {
+          if (!hasDataInMonthAllYears(m)) return;
+          applySegmentMonthOnly(m);
+        }
         refresh();
       }
     });
