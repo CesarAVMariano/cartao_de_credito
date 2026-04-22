@@ -368,7 +368,6 @@ function rebuildSegmentUI() {
 
   const hasAny = allTransactions.length > 0;
   histBtn.disabled = !hasAny;
-  histBtn.textContent = state.periodSeg === "hist" ? "Todo o histórico" : "Limpar Filtros";
   histBtn.classList.toggle("seg-btn--active", state.periodSeg === "hist");
 
   const yui = getUiYears();

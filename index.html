@@ -77,11 +77,10 @@
 
           <section class="dashboard-filters glass" aria-label="Filtro do período">
             <div class="segment-filters segment-filters--one-line" id="segmentFilters">
-              <div class="segment-chunk" role="group" aria-label="Intervalo">
-                <span class="segment-chunk-label">Intervalo</span>
+              <div class="segment-chunk" role="group" aria-label="Limpar filtros e restaurar histórico completo">
                 <div class="segment-control" id="segIntervalo">
                   <button type="button" class="seg-btn seg-btn--hist" data-seg-action="hist" id="segBtnHist">
-                    Todo o histórico
+                    Limpar Filtros
                   </button>
                 </div>
               </div>
@@ -93,16 +92,18 @@
               <div class="segment-divider" aria-hidden="true"></div>
               <div class="segment-chunk segment-chunk--mes" role="group" aria-label="Mês">
                 <span class="segment-chunk-label">Mês</span>
-                <div class="segment-control segment-control--mes" id="segMeses"></div>
-                <button
-                  type="button"
-                  class="seg-btn seg-btn--ghost seg-btn--ano-inteiro"
-                  data-seg-action="year-only"
-                  id="segBtnAnoInteiro"
-                  hidden
-                >
-                  Ano int.
-                </button>
+                <div class="segment-mes-wrap">
+                  <div class="segment-control segment-control--mes" id="segMeses"></div>
+                  <button
+                    type="button"
+                    class="seg-btn seg-btn--ghost seg-btn--ano-inteiro"
+                    data-seg-action="year-only"
+                    id="segBtnAnoInteiro"
+                    hidden
+                  >
+                    Ano int.
+                  </button>
+                </div>
               </div>
             </div>
             <p class="dashboard-filters-hint" id="dashboardFiltersHint">
