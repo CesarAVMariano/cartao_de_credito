@@ -129,6 +129,8 @@ const state = {
   sortDir: "desc",
   chartCategoria: null,
   chartEvolucao: null,
+  /** categoria selecionada no drill do gráfico de barras, ou null = visão por categoria */
+  chartDrillCategoria: null,
 };
 
 function getDataExtent() {
@@ -183,8 +185,6 @@ function applyDataExtent() {
   state.dataAte = sAte;
   state.mesFiltro = "all";
   rebuildMonthSelect();
-  const fmes = document.getElementById("filterMes");
-  if (fmes) fmes.value = "all";
 }
 
 function applyYyyyMm(ym) {
@@ -203,8 +203,6 @@ function applyYyyyMm(ym) {
   state.dataAte = sAte;
   state.mesFiltro = ym;
   rebuildMonthSelect();
-  const fmes = document.getElementById("filterMes");
-  if (fmes) fmes.value = ym;
 }
 
 function updateMesFiltroFromDates() {
@@ -347,6 +345,54 @@ function aggregateByCategoria(transactions) {
   };
 }
 
+/* --- Série: total por subcategoria (apenas uma categoria) --- */
+function aggregateBySubcategoria(transactions, categoria) {
+  const m = new Map();
+  for (const t of transactions) {
+    if (t.categoria !== categoria) continue;
+    const sub = (t.subcategoria && String(t.subcategoria).trim()) || "(sem subcategoria)";
+    m.set(sub, (m.get(sub) || 0) + t.valor);
+  }
+  const entries = Array.from(m.entries()).sort((a, b) => b[1] - a[1]);
+  return {
+    labels: entries.map((e) => e[0]),
+    values: entries.map((e) => e[1]),
+  };
+}
+
+function buildBarCategoryData() {
+  const t = getFiltered();
+  if (state.chartDrillCategoria) {
+    return aggregateBySubcategoria(t, state.chartDrillCategoria);
+  }
+  return aggregateByCategoria(t);
+}
+
+function maybeResetChartDrill() {
+  if (!state.chartDrillCategoria) return;
+  const t = getFiltered();
+  if (!t.some((x) => x.categoria === state.chartDrillCategoria)) {
+    state.chartDrillCategoria = null;
+  }
+}
+
+function updateCategoryPanelUI() {
+  const title = document.getElementById("chartCategoriaTitle");
+  const hint = document.getElementById("chartCategoriaHint");
+  const back = document.getElementById("btnChartCategoriaBack");
+  if (title) {
+    title.textContent = state.chartDrillCategoria ? "Gasto por subcategoria" : "Gasto por categoria";
+  }
+  if (hint) {
+    hint.textContent = state.chartDrillCategoria
+      ? `Nível: ${state.chartDrillCategoria} — use «Voltar» para a visão geral.`
+      : "Clique numa categoria na barra para ver subcategorias em detalhe.";
+  }
+  if (back) {
+    back.hidden = !state.chartDrillCategoria;
+  }
+}
+
 /* --- Série: gasto diário (todos os dias no intervalo visível) --- */
 function getLineRange() {
   const { de, ate } = getDateOnlyFilter();
@@ -416,7 +462,8 @@ function ensureCharts() {
   const isDark = document.documentElement.getAttribute("data-theme") === "dark";
   const text = chartTextColor();
   const grid = chartGridColor();
-  const catData = aggregateByCategoria(getFiltered());
+  maybeResetChartDrill();
+  const barData = buildBarCategoryData();
   const dayData = aggregateByDay(getFiltered());
 
   const commonOptions = {
@@ -444,21 +491,71 @@ function ensureCharts() {
     },
   };
 
+  const barTooltip = {
+    ...commonOptions.plugins.tooltip,
+    callbacks: {
+      ...commonOptions.plugins.tooltip.callbacks,
+      title: (items) => {
+        if (!items || !items.length) return "";
+        if (state.chartDrillCategoria) {
+          return [String(items[0].label), `Categoria: ${state.chartDrillCategoria}`];
+        }
+        return String(items[0].label);
+      },
+    },
+  };
+
+  const barScales = {
+    x: {
+      ticks: { color: text, maxRotation: 45, minRotation: 0, font: { size: 11 } },
+      grid: { display: false },
+    },
+    y: {
+      beginAtZero: true,
+      ticks: {
+        color: text,
+        callback: (v) => "R$ " + Number(v).toLocaleString("pt-BR", { maximumFractionDigits: 0 }),
+      },
+      grid: { color: grid },
+    },
+  };
+
+  const barInteractions = {
+    onClick: (e, elements) => {
+      if (state.chartDrillCategoria) return;
+      if (!elements || !elements.length) return;
+      const ch = state.chartCategoria;
+      if (!ch) return;
+      const idx = elements[0].index;
+      const lab = ch.data.labels[idx];
+      if (lab == null || lab === "") return;
+      state.chartDrillCategoria = String(lab);
+      ensureCharts();
+    },
+    onHover: (e, elements) => {
+      const cvs = (e && e.native && e.native.target) || state.chartCategoria?.canvas;
+      const onBar = !state.chartDrillCategoria && Array.isArray(elements) && elements.length > 0;
+      if (cvs && cvs.style) cvs.style.cursor = onBar ? "pointer" : "default";
+    },
+  };
+
   if (state.chartCategoria) {
-    state.chartCategoria.data.labels = catData.labels;
-    state.chartCategoria.data.datasets[0].data = catData.values;
-    state.chartCategoria.data.datasets[0].backgroundColor = catData.labels.map((_, i) => getBarColors()(i));
+    state.chartCategoria.data.labels = barData.labels;
+    state.chartCategoria.data.datasets[0].data = barData.values;
+    state.chartCategoria.data.datasets[0].backgroundColor = barData.labels.map((_, i) => getBarColors()(i));
+    state.chartCategoria.options.plugins.tooltip = barTooltip;
     state.chartCategoria.update();
+    updateCategoryPanelUI();
   } else {
     const ctx = document.getElementById("chartCategoria");
     state.chartCategoria = new Chart(ctx, {
       type: "bar",
       data: {
-        labels: catData.labels,
+        labels: barData.labels,
         datasets: [
           {
-            data: catData.values,
-            backgroundColor: catData.labels.map((_, i) => getBarColors()(i)),
+            data: barData.values,
+            backgroundColor: barData.labels.map((_, i) => getBarColors()(i)),
             borderRadius: 16,
             borderSkipped: false,
             maxBarThickness: 48,
@@ -467,23 +564,16 @@ function ensureCharts() {
       },
       options: {
         ...commonOptions,
-        scales: {
-          x: {
-            ticks: { color: text, maxRotation: 45, minRotation: 0, font: { size: 11 } },
-            grid: { display: false },
-          },
-          y: {
-            beginAtZero: true,
-            ticks: {
-              color: text,
-              callback: (v) =>
-                "R$ " + Number(v).toLocaleString("pt-BR", { maximumFractionDigits: 0 }),
-            },
-            grid: { color: grid },
-          },
+        plugins: {
+          ...commonOptions.plugins,
+          tooltip: barTooltip,
         },
+        onClick: barInteractions.onClick,
+        onHover: barInteractions.onHover,
+        scales: barScales,
       },
     });
+    updateCategoryPanelUI();
   }
 
   if (state.chartEvolucao) {
@@ -763,6 +853,7 @@ function importCSVText(text) {
     throw new Error("Nenhuma transação válida foi encontrada.");
   }
   allTransactions = rows.sort((a, b) => a.data - b.data);
+  state.chartDrillCategoria = null;
   state.categoria = "";
   state.search = "";
   document.getElementById("filterCategoria").value = "";
@@ -772,9 +863,6 @@ function importCSVText(text) {
   if (ft) ft.value = "";
   applyDataExtent();
   updateDateInputBounds();
-  rebuildMonthSelect();
-  const fmes = document.getElementById("filterMes");
-  if (fmes) fmes.value = "all";
   fillCategorySelect();
   refresh();
 }
@@ -809,7 +897,6 @@ function init() {
   fillCategorySelect();
   applyDataExtent();
   updateDateInputBounds();
-  rebuildMonthSelect();
   if (typeof Chart !== "undefined") {
     Chart.defaults.font = { family: "'DM Sans', system-ui, sans-serif", size: 12, weight: "500" };
   }
@@ -838,8 +925,19 @@ function init() {
   });
 
   const onDateFilterChange = () => {
-    state.dataDe = document.getElementById("filterDataDe").value;
-    state.dataAte = document.getElementById("filterDataAte").value;
+    const deEl = document.getElementById("filterDataDe");
+    const ateEl = document.getElementById("filterDataAte");
+    let dDe = deEl.value;
+    let dAte = ateEl.value;
+    if (dDe && dAte && dDe > dAte) {
+      const t = dDe;
+      dDe = dAte;
+      dAte = t;
+      deEl.value = dDe;
+      ateEl.value = dAte;
+    }
+    state.dataDe = dDe;
+    state.dataAte = dAte;
     updateMesFiltroFromDates();
     rebuildMonthSelect();
     refresh();
@@ -863,15 +961,22 @@ function init() {
   document.getElementById("filterReset").addEventListener("click", () => {
     state.categoria = "";
     state.search = "";
+    state.chartDrillCategoria = null;
     document.getElementById("filterCategoria").value = "";
     globalSearch.value = "";
     filterTexto.value = "";
     applyDataExtent();
     updateDateInputBounds();
-    rebuildMonthSelect();
-    document.getElementById("filterMes").value = "all";
     refresh();
   });
+
+  const btnBackCat = document.getElementById("btnChartCategoriaBack");
+  if (btnBackCat) {
+    btnBackCat.addEventListener("click", () => {
+      state.chartDrillCategoria = null;
+      ensureCharts();
+    });
+  }
 
   document.querySelectorAll(".th-btn").forEach((btn) => {
     btn.addEventListener("click", () => {

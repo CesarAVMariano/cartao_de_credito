@@ -86,7 +86,7 @@
           </section>
 
           <section class="cards-row" id="summaryCards" aria-label="Resumo">
-            <article class="stat-card glass highlight">
+            <article class="stat-card glass highlight has-shine">
               <div class="stat-card-top">
                 <span class="stat-label">Total da fatura</span>
                 <span class="stat-arrow" aria-hidden="true">↗</span>
@@ -94,7 +94,7 @@
               <p class="stat-value" id="cardTotal">R$ 0,00</p>
               <p class="stat-foot" id="cardPeriod">—</p>
             </article>
-            <article class="stat-card glass">
+            <article class="stat-card glass has-shine">
               <div class="stat-card-top">
                 <span class="stat-label">Qtd. de lançamentos</span>
                 <span class="stat-arrow" aria-hidden="true">↗</span>
@@ -102,7 +102,7 @@
               <p class="stat-value" id="cardCount">0</p>
               <p class="stat-foot">Transações no período</p>
             </article>
-            <article class="stat-card glass">
+            <article class="stat-card glass has-shine">
               <div class="stat-card-top">
                 <span class="stat-label">Ticket médio</span>
                 <span class="stat-arrow" aria-hidden="true">↗</span>
@@ -113,15 +113,27 @@
           </section>
 
           <section class="charts-grid">
-            <div class="chart-panel glass" data-chart="bar">
-              <div class="panel-head">
-                <h2>Gasto por categoria</h2>
+            <div class="chart-panel glass chart-panel-bar has-shine" data-chart="bar">
+              <div class="panel-head panel-head-bar">
+                <button
+                  type="button"
+                  class="btn btn-back"
+                  id="btnChartCategoriaBack"
+                  hidden
+                  aria-label="Voltar à visão de categorias"
+                >
+                  ← Voltar às categorias
+                </button>
+                <div class="panel-head-titles">
+                  <h2 id="chartCategoriaTitle">Gasto por categoria</h2>
+                  <p class="panel-hint" id="chartCategoriaHint">Clique numa categoria na barra para ver subcategorias</p>
+                </div>
               </div>
               <div class="chart-box">
                 <canvas id="chartCategoria" height="220"></canvas>
               </div>
             </div>
-            <div class="chart-panel glass" data-chart="line">
+            <div class="chart-panel glass has-shine" data-chart="line">
               <div class="panel-head">
                 <h2>Evolução de gasto por dia</h2>
               </div>
@@ -143,11 +155,11 @@
                 </label>
                 <label class="filter-field">
                   <span>De</span>
-                  <input type="date" id="filterDataDe" min="2026-01-01" max="2026-03-31" />
+                  <input type="date" id="filterDataDe" />
                 </label>
                 <label class="filter-field">
                   <span>Até</span>
-                  <input type="date" id="filterDataAte" min="2026-01-01" max="2026-03-31" />
+                  <input type="date" id="filterDataAte" />
                 </label>
                 <label class="filter-field grow">
                   <span>Busca</span>
