@@ -123,8 +123,8 @@ const state = {
   categoria: "",
   dataDe: "",
   dataAte: "",
-  /** 'all' | 'YYYY-MM' | 'custom' */
-  mesFiltro: "all",
+  /** 'hist' = todo o histórico | { y, m: null|1..12 } | 'custom' */
+  periodSeg: "hist",
   sortKey: "data",
   sortDir: "desc",
   chartCategoria: null,
@@ -183,14 +183,45 @@ function applyDataExtent() {
   }
   state.dataDe = sDe;
   state.dataAte = sAte;
-  state.mesFiltro = "all";
-  rebuildMonthSelect();
+  state.periodSeg = "hist";
+  rebuildSegmentUI();
+  updateDateInputBounds();
 }
 
-function applyYyyyMm(ym) {
-  const [y, m] = ym.split("-").map(Number);
-  const de = new Date(y, m - 1, 1);
-  const ate = new Date(y, m, 0);
+/** Ano anterior e ano atual (calendário) para a UI */
+function getUiYears() {
+  const y = new Date().getFullYear();
+  return [y - 1, y];
+}
+
+function hasDataInYear(y) {
+  return allTransactions.some((t) => t.data.getFullYear() === y);
+}
+
+function hasDataInMonth(y, month1to12) {
+  const m0 = month1to12 - 1;
+  return allTransactions.some(
+    (t) => t.data.getFullYear() === y && t.data.getMonth() === m0
+  );
+}
+
+function isFullYearOneCalendar(de, ate, y) {
+  if (!de || !ate) return false;
+  const a = new Date(y, 0, 1);
+  const b = new Date(y, 11, 31);
+  return sameLocalDay(de, a) && sameLocalDay(ate, b);
+}
+
+function isSingleMonthInYear(de, ate, y, month1to12) {
+  if (!de || !ate) return false;
+  if (de.getFullYear() !== y || ate.getFullYear() !== y) return false;
+  if (de.getMonth() !== month1to12 - 1 || ate.getMonth() !== month1to12 - 1) return false;
+  return isFullCalendarMonth(de, ate);
+}
+
+function applySegmentYear(y) {
+  const de = new Date(y, 0, 1);
+  const ate = new Date(y, 11, 31);
   const sDe = toISODate(de);
   const sAte = toISODate(ate);
   const deEl = document.getElementById("filterDataDe");
@@ -201,72 +232,135 @@ function applyYyyyMm(ym) {
   }
   state.dataDe = sDe;
   state.dataAte = sAte;
-  state.mesFiltro = ym;
-  rebuildMonthSelect();
+  state.periodSeg = { y, m: null };
+  rebuildSegmentUI();
+  updateDateInputBounds();
 }
 
-function updateMesFiltroFromDates() {
+function applySegmentYearMonth(y, month1to12) {
+  const de = new Date(y, month1to12 - 1, 1);
+  const ate = new Date(y, month1to12, 0);
+  const sDe = toISODate(de);
+  const sAte = toISODate(ate);
+  const deEl = document.getElementById("filterDataDe");
+  const ateEl = document.getElementById("filterDataAte");
+  if (deEl && ateEl) {
+    deEl.value = sDe;
+    ateEl.value = sAte;
+  }
+  state.dataDe = sDe;
+  state.dataAte = sAte;
+  state.periodSeg = { y, m: month1to12 };
+  rebuildSegmentUI();
+  updateDateInputBounds();
+}
+
+function syncPeriodSegFromDates() {
   if (!state.dataDe || !state.dataAte) {
-    state.mesFiltro = "custom";
+    state.periodSeg = "custom";
     return;
   }
   const de = parseISODate(state.dataDe);
   const ate = parseISODate(state.dataAte);
   if (!de || !ate) {
-    state.mesFiltro = "custom";
+    state.periodSeg = "custom";
     return;
   }
   const ext = getDataExtent();
   if (sameLocalDay(de, ext.min) && sameLocalDay(ate, ext.max)) {
-    state.mesFiltro = "all";
+    state.periodSeg = "hist";
     return;
   }
-  if (isFullCalendarMonth(de, ate)) {
-    state.mesFiltro = `${de.getFullYear()}-${String(de.getMonth() + 1).padStart(2, "0")}`;
-    return;
+  for (const y of getUiYears()) {
+    if (isFullYearOneCalendar(de, ate, y)) {
+      state.periodSeg = { y, m: null };
+      return;
+    }
   }
-  state.mesFiltro = "custom";
+  for (const y of getUiYears()) {
+    for (let m = 1; m <= 12; m++) {
+      if (isSingleMonthInYear(de, ate, y, m)) {
+        state.periodSeg = { y, m };
+        return;
+      }
+    }
+  }
+  state.periodSeg = "custom";
 }
 
-function getMonthKeysFromData() {
-  const s = new Set();
-  for (const t of allTransactions) {
-    s.add(`${t.data.getFullYear()}-${String(t.data.getMonth() + 1).padStart(2, "0")}`);
-  }
-  return Array.from(s).sort();
-}
+const MESES_ABREV = [
+  "jan",
+  "fev",
+  "mar",
+  "abr",
+  "mai",
+  "jun",
+  "jul",
+  "ago",
+  "set",
+  "out",
+  "nov",
+  "dez",
+];
 
-function formatMonthLabel(ym) {
-  const [y, m] = ym.split("-").map(Number);
-  return new Date(y, m - 1, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
-}
+function rebuildSegmentUI() {
+  const histBtn = document.getElementById("segBtnHist");
+  const segAnos = document.getElementById("segAnos");
+  const segMesBlock = document.getElementById("segMesBlock");
+  const segMeses = document.getElementById("segMeses");
+  const segBtnAnoInteiro = document.getElementById("segBtnAnoInteiro");
+  if (!histBtn || !segAnos) return;
 
-function rebuildMonthSelect() {
-  const sel = document.getElementById("filterMes");
-  if (!sel) return;
-  const cur = state.mesFiltro;
-  const keys = getMonthKeysFromData();
-  sel.innerHTML = "";
-  const oAll = document.createElement("option");
-  oAll.value = "all";
-  oAll.textContent = "Todo o histórico";
-  sel.appendChild(oAll);
-  for (const key of keys) {
-    const o = document.createElement("option");
-    o.value = key;
-    o.textContent = formatMonthLabel(key);
-    sel.appendChild(o);
+  const hasAny = allTransactions.length > 0;
+  histBtn.disabled = !hasAny;
+  histBtn.classList.toggle("seg-btn--active", state.periodSeg === "hist");
+
+  const yui = getUiYears();
+  segAnos.innerHTML = "";
+  for (const y of yui) {
+    const can = hasDataInYear(y);
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "seg-btn";
+    btn.textContent = String(y);
+    btn.dataset.segYear = String(y);
+    btn.disabled = !can;
+    const active = typeof state.periodSeg === "object" && state.periodSeg && state.periodSeg.y === y;
+    btn.classList.toggle("seg-btn--active", active);
+    segAnos.appendChild(btn);
   }
-  if (cur === "custom") {
-    const oc = document.createElement("option");
-    oc.value = "custom";
-    oc.textContent = "Personalizado";
-    sel.appendChild(oc);
+
+  const showMes =
+    typeof state.periodSeg === "object" &&
+    state.periodSeg !== null &&
+    yui.includes(state.periodSeg.y);
+  if (segMesBlock) segMesBlock.hidden = !showMes;
+  if (segBtnAnoInteiro) {
+    if (!showMes) {
+      segBtnAnoInteiro.hidden = true;
+    } else {
+      const y = state.periodSeg.y;
+      const canY = hasDataInYear(y);
+      segBtnAnoInteiro.hidden = false;
+      segBtnAnoInteiro.disabled = !canY;
+      segBtnAnoInteiro.classList.toggle("seg-btn--active", state.periodSeg.m === null);
+    }
   }
-  if (["all", "custom"].includes(cur) || keys.includes(cur)) {
-    sel.value = cur;
-  } else {
-    sel.value = "all";
+  if (!showMes || !segMeses) return;
+
+  const y = state.periodSeg.y;
+  segMeses.innerHTML = "";
+  for (let m = 1; m <= 12; m++) {
+    const can = hasDataInMonth(y, m);
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "seg-btn seg-btn--sm";
+    b.textContent = MESES_ABREV[m - 1];
+    b.dataset.segMonth = String(m);
+    b.title = new Date(y, m - 1, 1).toLocaleDateString("pt-BR", { month: "long" });
+    b.disabled = !can;
+    b.classList.toggle("seg-btn--active", state.periodSeg.m === m);
+    segMeses.appendChild(b);
   }
 }
 
@@ -896,7 +990,6 @@ function exportCSV() {
 function init() {
   fillCategorySelect();
   applyDataExtent();
-  updateDateInputBounds();
   if (typeof Chart !== "undefined") {
     Chart.defaults.font = { family: "'DM Sans', system-ui, sans-serif", size: 12, weight: "500" };
   }
@@ -938,25 +1031,51 @@ function init() {
     }
     state.dataDe = dDe;
     state.dataAte = dAte;
-    updateMesFiltroFromDates();
-    rebuildMonthSelect();
+    syncPeriodSegFromDates();
+    rebuildSegmentUI();
     refresh();
   };
   document.getElementById("filterDataDe").addEventListener("change", onDateFilterChange);
   document.getElementById("filterDataAte").addEventListener("change", onDateFilterChange);
 
-  document.getElementById("filterMes").addEventListener("change", (e) => {
-    const v = e.target.value;
-    if (v === "all") {
-      applyDataExtent();
-    } else if (v === "custom") {
-      return;
-    } else if (/^\d{4}-\d{2}$/.test(v)) {
-      applyYyyyMm(v);
-    }
-    updateDateInputBounds();
-    refresh();
-  });
+  const segRoot = document.getElementById("segmentFilters");
+  if (segRoot) {
+    segRoot.addEventListener("click", (e) => {
+      const t = e.target.closest(".seg-btn");
+      if (!t || t.disabled) return;
+      e.preventDefault();
+      if (t.id === "segBtnHist" || t.dataset.segAction === "hist") {
+        if (!allTransactions.length) return;
+        applyDataExtent();
+        refresh();
+        return;
+      }
+      if (t.dataset.segAction === "year-only") {
+        const ps = state.periodSeg;
+        if (typeof ps === "object" && ps && ps.y) {
+          applySegmentYear(ps.y);
+          refresh();
+        }
+        return;
+      }
+      if (t.dataset.segYear != null) {
+        const y = parseInt(t.dataset.segYear, 10);
+        if (!hasDataInYear(y)) return;
+        applySegmentYear(y);
+        refresh();
+        return;
+      }
+      if (t.dataset.segMonth != null) {
+        const ps = state.periodSeg;
+        if (typeof ps !== "object" || !ps || !ps.y) return;
+        const y = ps.y;
+        const m = parseInt(t.dataset.segMonth, 10);
+        if (!hasDataInMonth(y, m)) return;
+        applySegmentYearMonth(y, m);
+        refresh();
+      }
+    });
+  }
 
   document.getElementById("filterReset").addEventListener("click", () => {
     state.categoria = "";

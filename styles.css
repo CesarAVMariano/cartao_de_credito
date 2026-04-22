@@ -438,13 +438,12 @@ body {
   align-items: center;
 }
 
-/* Filtro por mês (dashboard) */
+/* Filtro por segmentação (dashboard) */
 .dashboard-filters {
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 1rem;
-  padding: 1rem 1.25rem;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem 1.15rem;
   animation: dash-in 0.55s ease backwards;
 }
 
@@ -459,45 +458,135 @@ body {
   }
 }
 
-.dashboard-filters .month-field {
-  min-width: 220px;
+.segment-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  width: 100%;
 }
 
-.dashboard-filters .month-field select {
-  font: inherit;
-  padding: 0.5rem 0.75rem;
+.segment-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.segment-block-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-muted);
+}
+
+.segment-block-sublabel {
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 0.7rem;
+  opacity: 0.85;
+}
+
+.segment-control {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: center;
+  padding: 0.3rem;
   border-radius: var(--radius-sm);
+  background: rgba(34, 160, 107, 0.06);
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.5);
+}
+
+.segment-control--mes {
+  max-width: 100%;
+}
+
+.segment-ano-inteiro {
+  width: 100%;
+  margin-top: 0.1rem;
+  padding-left: 0.1rem;
+}
+
+.seg-btn {
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.45rem 0.9rem;
+  min-height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.55);
   color: var(--ink);
-  min-height: 44px;
   cursor: pointer;
-  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.25s, transform 0.15s, filter 0.2s;
 }
 
-[data-theme="dark"] .dashboard-filters .month-field select {
-  background: rgba(0, 0, 0, 0.25);
+[data-theme="dark"] .seg-btn {
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--ink);
 }
 
-.dashboard-filters .month-field select:hover {
-  border-color: var(--green-500);
+.seg-btn:hover:not(:disabled) {
+  border-color: rgba(34, 160, 107, 0.45);
+  background: rgba(34, 160, 107, 0.12);
   transform: translateY(-1px);
 }
 
-.dashboard-filters .month-field select:focus {
-  outline: none;
-  border-color: var(--green-500);
-  box-shadow: 0 0 0 2px rgba(34, 160, 107, 0.2);
+.seg-btn:focus-visible {
+  outline: 2px solid var(--green-500);
+  outline-offset: 2px;
+}
+
+.seg-btn--active {
+  background: linear-gradient(135deg, var(--green-500), var(--green-800));
+  color: #f6fffa;
+  border-color: transparent;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.06), 0 4px 14px rgba(34, 160, 107, 0.35);
+}
+
+.seg-btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+  filter: grayscale(0.2);
+}
+
+.seg-btn--sm {
+  min-width: 2.4rem;
+  padding: 0.35rem 0.4rem;
+  font-size: 0.7rem;
+  min-height: 34px;
+  text-transform: lowercase;
+  letter-spacing: 0.02em;
+}
+
+.seg-btn--wide {
+  min-width: 9rem;
+}
+
+.seg-btn--ghost {
+  background: rgba(34, 160, 107, 0.08);
+  font-size: 0.8rem;
+  min-height: 36px;
+}
+
+.seg-btn--ghost.seg-btn--active {
+  background: linear-gradient(135deg, rgba(34, 160, 107, 0.55), rgba(20, 82, 58, 0.85));
+  color: #fff;
+}
+
+[data-theme="dark"] .seg-btn--ghost {
+  background: rgba(34, 160, 107, 0.12);
 }
 
 .dashboard-filters-hint {
   margin: 0;
-  flex: 1 1 200px;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: var(--ink-muted);
   line-height: 1.4;
-  align-self: center;
-  padding-bottom: 0.15rem;
+  max-width: 52rem;
 }
 
 .btn {
@@ -670,6 +759,108 @@ body {
   }
 }
 
+/* Card “Total da fatura” — efeito orgânico (formas em morph + brume) */
+.stat-card--organic {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.stat-card--organic .stat-card__body {
+  position: relative;
+  z-index: 2;
+}
+
+.organic-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+.organic-blob {
+  position: absolute;
+  filter: blur(32px);
+  mix-blend-mode: soft-light;
+  opacity: 0.5;
+  will-change: transform, border-radius;
+  animation: organic-morph 14s ease-in-out infinite, organic-drift 22s ease-in-out infinite;
+}
+
+.organic-blob--1 {
+  width: 125%;
+  height: 95%;
+  left: -18%;
+  top: -8%;
+  border-radius: 58% 42% 62% 38% / 48% 55% 45% 52%;
+  background: radial-gradient(ellipse 80% 90% at 40% 40%, rgba(90, 240, 180, 0.45) 0%, transparent 70%);
+  animation-delay: 0s, 0s;
+}
+
+.organic-blob--2 {
+  width: 100%;
+  height: 110%;
+  right: -25%;
+  bottom: -20%;
+  border-radius: 45% 55% 48% 52% / 42% 48% 52% 58%;
+  background: radial-gradient(ellipse 70% 80% at 60% 50%, rgba(20, 120, 85, 0.55) 0%, transparent 65%);
+  animation-delay: -4s, -3s;
+  animation-duration: 11s, 19s;
+}
+
+.organic-blob--3 {
+  width: 70%;
+  height: 70%;
+  left: 5%;
+  bottom: 5%;
+  border-radius: 52% 48% 55% 45% / 50% 42% 58% 50%;
+  background: radial-gradient(ellipse at 30% 60%, rgba(200, 255, 220, 0.35) 0%, transparent 60%);
+  animation-delay: -7s, -8s;
+  animation-duration: 16s, 25s;
+  opacity: 0.42;
+}
+
+[data-theme="dark"] .organic-blob--1 {
+  background: radial-gradient(ellipse 80% 90% at 40% 40%, rgba(60, 200, 140, 0.35) 0%, transparent 70%);
+}
+[data-theme="dark"] .organic-blob--2 {
+  background: radial-gradient(ellipse 70% 80% at 60% 50%, rgba(10, 60, 45, 0.65) 0%, transparent 65%);
+}
+[data-theme="dark"] .organic-blob--3 {
+  background: radial-gradient(ellipse at 30% 60%, rgba(100, 200, 150, 0.25) 0%, transparent 60%);
+}
+
+@keyframes organic-morph {
+  0%,
+  100% {
+    border-radius: 58% 42% 62% 38% / 48% 55% 45% 52%;
+  }
+  33% {
+    border-radius: 42% 58% 48% 52% / 55% 44% 56% 45%;
+  }
+  66% {
+    border-radius: 52% 48% 40% 60% / 60% 40% 50% 50%;
+  }
+}
+
+@keyframes organic-drift {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1) rotate(0deg);
+  }
+  25% {
+    transform: translate(3%, -2%) scale(1.04) rotate(1.5deg);
+  }
+  50% {
+    transform: translate(-2%, 3%) scale(0.98) rotate(-1deg);
+  }
+  75% {
+    transform: translate(2%, 2%) scale(1.02) rotate(0.5deg);
+  }
+}
+
 /* Cards */
 .cards-row {
   display: grid;
@@ -700,6 +891,9 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .dashboard-filters {
+    animation: none !important;
+  }
+  .organic-blob {
     animation: none !important;
   }
   .has-shine::before,

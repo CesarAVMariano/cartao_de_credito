@@ -76,23 +76,49 @@
           </section>
 
           <section class="dashboard-filters glass" aria-label="Filtro do período">
-            <label class="filter-field month-field">
-              <span>Mês</span>
-              <select id="filterMes">
-                <option value="all">Todo o histórico</option>
-              </select>
-            </label>
-            <p class="dashboard-filters-hint">Os cards e gráficos acompanham o mês (ou o intervalo) selecionado. Ajuste datas abaixo para um intervalo personalizado.</p>
+            <div class="segment-filters" id="segmentFilters">
+              <div class="segment-block" role="group" aria-label="Intervalo">
+                <span class="segment-block-label">Intervalo</span>
+                <div class="segment-control" id="segIntervalo">
+                  <button type="button" class="seg-btn seg-btn--wide" data-seg-action="hist" id="segBtnHist">
+                    Todo o histórico
+                  </button>
+                </div>
+              </div>
+              <div class="segment-block" role="group" aria-label="Ano">
+                <span class="segment-block-label">Ano</span>
+                <div class="segment-control" id="segAnos"></div>
+              </div>
+              <div class="segment-block segment-block--mes" id="segMesBlock" hidden>
+                <span class="segment-block-label">Mês <span class="segment-block-sublabel">(com dados no ano selecionado)</span></span>
+                <div class="segment-control segment-control--mes" id="segMeses"></div>
+                <div class="segment-control segment-ano-inteiro">
+                  <button type="button" class="seg-btn seg-btn--ghost" data-seg-action="year-only" id="segBtnAnoInteiro" hidden>
+                    Ano inteiro
+                  </button>
+                </div>
+              </div>
+            </div>
+            <p class="dashboard-filters-hint" id="dashboardFiltersHint">
+              Use os segmentos acima. Anos fora de calendário (ano anterior e atual) ou meses sem lançamentos ficam inativos. Ajuste as datas abaixo para intervalo personalizado.
+            </p>
           </section>
 
           <section class="cards-row" id="summaryCards" aria-label="Resumo">
-            <article class="stat-card glass highlight has-shine">
-              <div class="stat-card-top">
-                <span class="stat-label">Total da fatura</span>
-                <span class="stat-arrow" aria-hidden="true">↗</span>
+            <article class="stat-card glass highlight stat-card--organic" aria-label="Total da fatura">
+              <div class="organic-layer" aria-hidden="true">
+                <span class="organic-blob organic-blob--1"></span>
+                <span class="organic-blob organic-blob--2"></span>
+                <span class="organic-blob organic-blob--3"></span>
               </div>
-              <p class="stat-value" id="cardTotal">R$ 0,00</p>
-              <p class="stat-foot" id="cardPeriod">—</p>
+              <div class="stat-card__body">
+                <div class="stat-card-top">
+                  <span class="stat-label">Total da fatura</span>
+                  <span class="stat-arrow" aria-hidden="true">↗</span>
+                </div>
+                <p class="stat-value" id="cardTotal">R$ 0,00</p>
+                <p class="stat-foot" id="cardPeriod">—</p>
+              </div>
             </article>
             <article class="stat-card glass has-shine">
               <div class="stat-card-top">
