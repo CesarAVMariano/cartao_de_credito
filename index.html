@@ -33,11 +33,6 @@
           <a class="nav-item" href="#"><span class="nav-ico" data-icon="bell"></span>Notificações</a>
           <a class="nav-item" href="#"><span class="nav-ico" data-icon="gear"></span>Configurações</a>
         </nav>
-        <div class="sidebar-cta">
-          <p>Resumo do período</p>
-          <strong>Jan–Mar/2026</strong>
-          <span class="sidebar-cta-hint">Dados mock para demonstração</span>
-        </div>
       </aside>
 
       <div class="main-wrap">
@@ -74,8 +69,20 @@
               <p class="subtitle">Visão consolidada do seu cartão de crédito</p>
             </div>
             <div class="page-head-btns">
+              <input type="file" id="csvFileInput" accept=".csv,text/csv" hidden />
+              <button type="button" class="btn btn-ghost" id="btnImport">Importar CSV</button>
               <button type="button" class="btn btn-primary" id="btnExport">Exportar CSV</button>
             </div>
+          </section>
+
+          <section class="dashboard-filters glass" aria-label="Filtro do período">
+            <label class="filter-field month-field">
+              <span>Mês</span>
+              <select id="filterMes">
+                <option value="all">Todo o histórico</option>
+              </select>
+            </label>
+            <p class="dashboard-filters-hint">Os cards e gráficos acompanham o mês (ou o intervalo) selecionado. Ajuste datas abaixo para um intervalo personalizado.</p>
           </section>
 
           <section class="cards-row" id="summaryCards" aria-label="Resumo">
@@ -85,7 +92,7 @@
                 <span class="stat-arrow" aria-hidden="true">↗</span>
               </div>
               <p class="stat-value" id="cardTotal">R$ 0,00</p>
-              <p class="stat-foot">Período 01/01 a 31/03/2026</p>
+              <p class="stat-foot" id="cardPeriod">—</p>
             </article>
             <article class="stat-card glass">
               <div class="stat-card-top">
@@ -106,19 +113,17 @@
           </section>
 
           <section class="charts-grid">
-            <div class="chart-panel glass">
+            <div class="chart-panel glass" data-chart="bar">
               <div class="panel-head">
                 <h2>Gasto por categoria</h2>
-                <span class="panel-badge">Barras</span>
               </div>
               <div class="chart-box">
                 <canvas id="chartCategoria" height="220"></canvas>
               </div>
             </div>
-            <div class="chart-panel glass">
+            <div class="chart-panel glass" data-chart="line">
               <div class="panel-head">
                 <h2>Evolução de gasto por dia</h2>
-                <span class="panel-badge">Linha</span>
               </div>
               <div class="chart-box">
                 <canvas id="chartEvolucao" height="220"></canvas>

@@ -123,17 +123,177 @@ const state = {
   categoria: "",
   dataDe: "",
   dataAte: "",
+  /** 'all' | 'YYYY-MM' | 'custom' */
+  mesFiltro: "all",
   sortKey: "data",
   sortDir: "desc",
   chartCategoria: null,
   chartEvolucao: null,
 };
 
+function getDataExtent() {
+  if (!allTransactions.length) {
+    return { min: new Date(PERIODO_INICIO), max: new Date(PERIODO_FIM) };
+  }
+  let minT = allTransactions[0].data.getTime();
+  let maxT = minT;
+  for (const t of allTransactions) {
+    const x = t.data.getTime();
+    if (x < minT) minT = x;
+    if (x > maxT) maxT = x;
+  }
+  const min = new Date(minT);
+  const max = new Date(maxT);
+  min.setHours(0, 0, 0, 0);
+  max.setHours(0, 0, 0, 0);
+  return { min, max };
+}
+
+function sameLocalDay(a, b) {
+  return (
+    a &&
+    b &&
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+function isFullCalendarMonth(de, ate) {
+  if (!de || !ate) return false;
+  const y = de.getFullYear();
+  const m = de.getMonth();
+  if (ate.getFullYear() !== y || ate.getMonth() !== m) return false;
+  if (de.getDate() !== 1) return false;
+  const last = new Date(y, m + 1, 0);
+  return sameLocalDay(ate, last);
+}
+
+function applyDataExtent() {
+  const { min, max } = getDataExtent();
+  const sDe = toISODate(min);
+  const sAte = toISODate(max);
+  const deEl = document.getElementById("filterDataDe");
+  const ateEl = document.getElementById("filterDataAte");
+  if (deEl && ateEl) {
+    deEl.value = sDe;
+    ateEl.value = sAte;
+  }
+  state.dataDe = sDe;
+  state.dataAte = sAte;
+  state.mesFiltro = "all";
+  rebuildMonthSelect();
+  const fmes = document.getElementById("filterMes");
+  if (fmes) fmes.value = "all";
+}
+
+function applyYyyyMm(ym) {
+  const [y, m] = ym.split("-").map(Number);
+  const de = new Date(y, m - 1, 1);
+  const ate = new Date(y, m, 0);
+  const sDe = toISODate(de);
+  const sAte = toISODate(ate);
+  const deEl = document.getElementById("filterDataDe");
+  const ateEl = document.getElementById("filterDataAte");
+  if (deEl && ateEl) {
+    deEl.value = sDe;
+    ateEl.value = sAte;
+  }
+  state.dataDe = sDe;
+  state.dataAte = sAte;
+  state.mesFiltro = ym;
+  rebuildMonthSelect();
+  const fmes = document.getElementById("filterMes");
+  if (fmes) fmes.value = ym;
+}
+
+function updateMesFiltroFromDates() {
+  if (!state.dataDe || !state.dataAte) {
+    state.mesFiltro = "custom";
+    return;
+  }
+  const de = parseISODate(state.dataDe);
+  const ate = parseISODate(state.dataAte);
+  if (!de || !ate) {
+    state.mesFiltro = "custom";
+    return;
+  }
+  const ext = getDataExtent();
+  if (sameLocalDay(de, ext.min) && sameLocalDay(ate, ext.max)) {
+    state.mesFiltro = "all";
+    return;
+  }
+  if (isFullCalendarMonth(de, ate)) {
+    state.mesFiltro = `${de.getFullYear()}-${String(de.getMonth() + 1).padStart(2, "0")}`;
+    return;
+  }
+  state.mesFiltro = "custom";
+}
+
+function getMonthKeysFromData() {
+  const s = new Set();
+  for (const t of allTransactions) {
+    s.add(`${t.data.getFullYear()}-${String(t.data.getMonth() + 1).padStart(2, "0")}`);
+  }
+  return Array.from(s).sort();
+}
+
+function formatMonthLabel(ym) {
+  const [y, m] = ym.split("-").map(Number);
+  return new Date(y, m - 1, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+}
+
+function rebuildMonthSelect() {
+  const sel = document.getElementById("filterMes");
+  if (!sel) return;
+  const cur = state.mesFiltro;
+  const keys = getMonthKeysFromData();
+  sel.innerHTML = "";
+  const oAll = document.createElement("option");
+  oAll.value = "all";
+  oAll.textContent = "Todo o histórico";
+  sel.appendChild(oAll);
+  for (const key of keys) {
+    const o = document.createElement("option");
+    o.value = key;
+    o.textContent = formatMonthLabel(key);
+    sel.appendChild(o);
+  }
+  if (cur === "custom") {
+    const oc = document.createElement("option");
+    oc.value = "custom";
+    oc.textContent = "Personalizado";
+    sel.appendChild(oc);
+  }
+  if (["all", "custom"].includes(cur) || keys.includes(cur)) {
+    sel.value = cur;
+  } else {
+    sel.value = "all";
+  }
+}
+
+function updateDateInputBounds() {
+  const { min, max } = getDataExtent();
+  const deEl = document.getElementById("filterDataDe");
+  const ateEl = document.getElementById("filterDataAte");
+  const sMin = toISODate(min);
+  const sMax = toISODate(max);
+  if (deEl) {
+    deEl.min = sMin;
+    deEl.max = sMax;
+  }
+  if (ateEl) {
+    ateEl.min = sMin;
+    ateEl.max = sMax;
+  }
+}
+
 function getDateOnlyFilter() {
   const de = state.dataDe ? parseISODate(state.dataDe) : null;
   const ate = state.dataAte ? parseISODate(state.dataAte) : null;
-  if (ate) ate.setHours(23, 59, 59, 999);
-  return { de, ate };
+  const ateOut = ate ? new Date(ate) : null;
+  if (ateOut) ateOut.setHours(23, 59, 59, 999);
+  return { de, ate: ateOut };
 }
 
 function matchesFilters(t) {
@@ -163,6 +323,15 @@ function updateSummary(transactions) {
   document.getElementById("cardTotal").textContent = formatMoney(total);
   document.getElementById("cardCount").textContent = String(count);
   document.getElementById("cardAvg").textContent = formatMoney(avg);
+  const periodEl = document.getElementById("cardPeriod");
+  if (periodEl) {
+    const { de, ate } = getDateOnlyFilter();
+    if (de && ate) {
+      periodEl.textContent = `Período ${de.toLocaleDateString("pt-BR")} a ${ate.toLocaleDateString("pt-BR")}`;
+    } else {
+      periodEl.textContent = "—";
+    }
+  }
 }
 
 /* --- Série: total por categoria --- */
@@ -253,7 +422,7 @@ function ensureCharts() {
   const commonOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    animation: { duration: 700, easing: "easeOutQuart" },
+    animation: { duration: 1100, easing: "easeOutQuart" },
     plugins: {
       legend: { display: false },
       tooltip: {
@@ -485,6 +654,131 @@ function applyTheme() {
   refresh();
 }
 
+/* --- Importação CSV (compatível com export) --- */
+function parseCSVLine(line, sep) {
+  const out = [];
+  let cur = "";
+  let inQ = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (c === '"') {
+      if (inQ && line[i + 1] === '"') {
+        cur += '"';
+        i++;
+      } else {
+        inQ = !inQ;
+      }
+    } else if (!inQ && c === sep) {
+      out.push(cur);
+      cur = "";
+    } else {
+      cur += c;
+    }
+  }
+  out.push(cur);
+  return out;
+}
+
+function mapHeaderIndices(header) {
+  const h = header.map((x) => x.trim().replace(/^\uFEFF/, "").toLowerCase());
+  const find = (names) => {
+    for (const n of names) {
+      const nn = n.replace(/\s/g, "");
+      const i = h.findIndex((x) => {
+        const xx = x.replace(/\s/g, "");
+        return x === n || xx === nn;
+      });
+      if (i >= 0) return i;
+    }
+    return -1;
+  };
+  return {
+    data: find(["data", "date"]),
+    valor: find(["valor", "value", "amount", "total"]),
+    categoria: find(["categoria", "category"]),
+    subcategoria: find(["subcategoria", "subcategory", "sub-categoria"]),
+    descricao: find(["descrição", "descricao", "description", "desc", "histórico", "historico"]),
+  };
+}
+
+function parseDateCell(s) {
+  const t = String(s).trim();
+  if (!t) throw new Error("Data vazia");
+  if (/^\d{4}-\d{2}-\d{2}/.test(t)) {
+    return parseISODate(t.slice(0, 10));
+  }
+  const br = t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (br) {
+    return new Date(+br[3], +br[2] - 1, +br[1]);
+  }
+  const d2 = new Date(t);
+  if (!isNaN(d2.getTime())) return d2;
+  throw new Error(`Data inválida: ${t}`);
+}
+
+function parseValorCell(s) {
+  let t = String(s).trim();
+  if (!t) return 0;
+  t = t.replace(/[R$\s\u00A0]/g, "");
+  if (t.includes(".") && t.includes(",")) {
+    t = t.replace(/\./g, "").replace(",", ".");
+  } else if (t.includes(",") && !t.includes(".")) {
+    t = t.replace(",", ".");
+  }
+  const n = parseFloat(t);
+  if (isNaN(n)) throw new Error(`Valor inválido: ${s}`);
+  return Math.round(n * 100) / 100;
+}
+
+function importCSVText(text) {
+  const raw = text.replace(/^\uFEFF/, "");
+  const lines = raw.split(/\r?\n/).filter((l) => l.trim().length > 0);
+  if (lines.length < 2) {
+    throw new Error("O CSV precisa de cabeçalho e pelo menos uma linha de dados.");
+  }
+  const first = lines[0];
+  const sep = first.split(";").length > first.split(",").length ? ";" : ",";
+  const header = parseCSVLine(first, sep);
+  const col = mapHeaderIndices(header);
+  if (col.data < 0 || col.valor < 0) {
+    throw new Error('Colunas obrigatórias: "Data" e "Valor". (Categorias e descrição são opcionais.)');
+  }
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cells = parseCSVLine(lines[i], sep);
+    if (cells.length < Math.max(col.data, col.valor) + 1) continue;
+    try {
+      const data = parseDateCell(cells[col.data] || "");
+      const valor = parseValorCell(cells[col.valor] || "0");
+      const categoria = col.categoria >= 0 ? String(cells[col.categoria] || "").trim() || "Outros" : "Outros";
+      const subcategoria = col.subcategoria >= 0 ? String(cells[col.subcategoria] || "").trim() : "";
+      const descricao = col.descricao >= 0 ? String(cells[col.descricao] || "").trim() : "";
+      rows.push({ data, valor, categoria, subcategoria, descricao });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      throw new Error(`Linha ${i + 1}: ${msg}`);
+    }
+  }
+  if (!rows.length) {
+    throw new Error("Nenhuma transação válida foi encontrada.");
+  }
+  allTransactions = rows.sort((a, b) => a.data - b.data);
+  state.categoria = "";
+  state.search = "";
+  document.getElementById("filterCategoria").value = "";
+  const gs = document.getElementById("globalSearch");
+  const ft = document.getElementById("filterTexto");
+  if (gs) gs.value = "";
+  if (ft) ft.value = "";
+  applyDataExtent();
+  updateDateInputBounds();
+  rebuildMonthSelect();
+  const fmes = document.getElementById("filterMes");
+  if (fmes) fmes.value = "all";
+  fillCategorySelect();
+  refresh();
+}
+
 /* --- Export CSV --- */
 function exportCSV() {
   const rows = sortTransactions(getFiltered());
@@ -505,19 +799,17 @@ function exportCSV() {
   const blob = new Blob(["\ufeff" + lines.join("\n")], { type: "text/csv;charset=utf-8;" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = "transacoes-credito-2026.csv";
+  a.download = "transacoes-cartao.csv";
   a.click();
   URL.revokeObjectURL(a.href);
 }
 
 /* --- Inicialização --- */
 function init() {
-  document.getElementById("filterDataDe").value = "2026-01-01";
-  document.getElementById("filterDataAte").value = "2026-03-31";
-  state.dataDe = "2026-01-01";
-  state.dataAte = "2026-03-31";
-
   fillCategorySelect();
+  applyDataExtent();
+  updateDateInputBounds();
+  rebuildMonthSelect();
   if (typeof Chart !== "undefined") {
     Chart.defaults.font = { family: "'DM Sans', system-ui, sans-serif", size: 12, weight: "500" };
   }
@@ -545,25 +837,39 @@ function init() {
     refresh();
   });
 
-  document.getElementById("filterDataDe").addEventListener("change", (e) => {
-    state.dataDe = e.target.value;
+  const onDateFilterChange = () => {
+    state.dataDe = document.getElementById("filterDataDe").value;
+    state.dataAte = document.getElementById("filterDataAte").value;
+    updateMesFiltroFromDates();
+    rebuildMonthSelect();
     refresh();
-  });
-  document.getElementById("filterDataAte").addEventListener("change", (e) => {
-    state.dataAte = e.target.value;
+  };
+  document.getElementById("filterDataDe").addEventListener("change", onDateFilterChange);
+  document.getElementById("filterDataAte").addEventListener("change", onDateFilterChange);
+
+  document.getElementById("filterMes").addEventListener("change", (e) => {
+    const v = e.target.value;
+    if (v === "all") {
+      applyDataExtent();
+    } else if (v === "custom") {
+      return;
+    } else if (/^\d{4}-\d{2}$/.test(v)) {
+      applyYyyyMm(v);
+    }
+    updateDateInputBounds();
     refresh();
   });
 
   document.getElementById("filterReset").addEventListener("click", () => {
     state.categoria = "";
-    state.dataDe = "2026-01-01";
-    state.dataAte = "2026-03-31";
     state.search = "";
     document.getElementById("filterCategoria").value = "";
-    document.getElementById("filterDataDe").value = "2026-01-01";
-    document.getElementById("filterDataAte").value = "2026-03-31";
     globalSearch.value = "";
     filterTexto.value = "";
+    applyDataExtent();
+    updateDateInputBounds();
+    rebuildMonthSelect();
+    document.getElementById("filterMes").value = "all";
     refresh();
   });
 
@@ -572,11 +878,11 @@ function init() {
       const k = btn.getAttribute("data-sort");
       if (state.sortKey === k) {
         state.sortDir = state.sortDir === "asc" ? "desc" : "asc";
-    } else {
-      state.sortKey = k;
-      const descFirst = k === "data" || k === "valor" || k === "descricao";
-      state.sortDir = descFirst ? "desc" : "asc";
-    }
+      } else {
+        state.sortKey = k;
+        const descFirst = k === "data" || k === "valor" || k === "descricao";
+        state.sortDir = descFirst ? "desc" : "asc";
+      }
       renderTable();
     });
   });
@@ -592,6 +898,29 @@ function init() {
   });
 
   document.getElementById("btnExport").addEventListener("click", exportCSV);
+
+  const csvIn = document.getElementById("csvFileInput");
+  document.getElementById("btnImport").addEventListener("click", () => {
+    if (csvIn) csvIn.click();
+  });
+  if (csvIn) {
+    csvIn.addEventListener("change", (e) => {
+      const f = e.target.files && e.target.files[0];
+      e.target.value = "";
+      if (!f) return;
+      const r = new FileReader();
+      r.onload = () => {
+        try {
+          importCSVText(String(r.result || ""));
+        } catch (err) {
+          const m = err instanceof Error ? err.message : String(err);
+          alert("Não foi possível importar: " + m);
+        }
+      };
+      r.onerror = () => alert("Erro ao ler o arquivo.");
+      r.readAsText(f, "UTF-8");
+    });
+  }
 
   document.addEventListener("keydown", (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
